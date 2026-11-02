@@ -31,14 +31,57 @@ When running **金铲铲之战 (JKChess)** (`com.tencent.jkchess`) through PlayC
 
 > **PlayCover version display note:** This workaround was tested with the PlayCover **4.0** build used in this setup. After installation, the application may still show **3.1.0** in its version display. This was observed in the tested setup and does not by itself prove that the wrong build was installed. Check the downloaded build/source rather than relying only on the displayed version number. This guide does not establish that all builds labeled 4.0 behave identically.
 
-## Quick fix
+## Step 1 — Trigger the macOS microphone permission prompt (important)
+
+**This step was missing from an earlier version of this guide.** On our test Mac, clicking the microphone button in JKChess **did not produce the macOS authorization dialog**. Merely enabling a setting in PlayCover was not enough. We eventually triggered the native prompt **from inside the running game process with LLDB**, using Apple's `AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio` API.
+
+1. In PlayCover, open **JKChess → Settings** and enable `checkMicPermissionSync` (the setting is named **Bypass / 绕过** in some interfaces; refer to the actual `checkMicPermissionSync` toggle rather than assuming a checkbox's meaning). Launch the game.
+2. Open **Terminal** and identify the game's process:
+
+   ```bash
+   pgrep -fl jkchess
+   ```
+
+3. Attach LLDB to the **running game process** (replace `<PID>` with the numeric PID from the previous command):
+
+   ```bash
+   lldb -p <PID>
+   ```
+
+   macOS may require Developer Tools/debugger authorization. If attaching is denied, do not disable SIP or weaken system security to follow this guide.
+4. At the `(lldb)` prompt, evaluate the following Objective-C expression **inside the game process**:
+
+   ```text
+   expr -l objc++ -- @import AVFoundation
+   expr -l objc++ -- [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {}]
+   ```
+
+   **Note:** These are illustrative LLDB expressions for the API used during our investigation, not a separately verified copy-and-paste transcript for every LLDB/macOS build. If LLDB cannot import the framework or evaluate the expression, do not repeatedly guess commands or change security settings.
+5. If macOS displays a microphone permission prompt for JKChess, click **Allow**. Then check **System Settings → Privacy & Security → Microphone** and ensure the game is enabled.
+6. Detach from LLDB and **fully quit the game** before applying the patch:
+
+   ```text
+   detach
+   quit
+   ```
+
+**If no prompt appears:** macOS may already have recorded an allow/deny decision. First check the Microphone privacy panel. If you specifically need to reset the game's permission decision, with the game closed you can try:
+
+```bash
+tccutil reset Microphone com.tencent.jkchess
+```
+
+The reset may fail if the identifier does not correspond to the registered macOS TCC client. As a **last resort**, `tccutil reset Microphone` resets microphone decisions for **all apps**, so every affected app may ask again. Resetting permission alone does **not** fix the game's internal permission error.
+
+Apple documents the authorization API and TCC reset behavior: [Requesting authorization for media capture on macOS](https://developer.apple.com/documentation/bundleresources/requesting-authorization-for-media-capture-on-macos).
+
+## Step 2 — Apply the executable patch
 
 **Before proceeding:**
 
-1. Grant JKChess microphone access in macOS System Settings.
-2. Enable **`checkMicPermissionSync`** in the game's PlayCover settings.
-3. **Fully quit the game and detach/exit LLDB**, if you have been debugging it.
-4. Understand that this is an **unofficial binary patch**. It changes the game executable and its code signature, potentially affecting game integrity checks, updates, or your account.
+1. Complete **Step 1** above: trigger and allow the native microphone prompt, then enable `checkMicPermissionSync`.
+2. **Fully quit the game and detach/exit LLDB** before modifying the executable.
+3. Understand that this is an **unofficial binary patch**. It changes the game executable and its code signature, potentially affecting game integrity checks, updates, or your account.
 
 Paste the entire block below into **Terminal**. The script verifies that the expected byte pattern occurs **exactly once**, saves a backup, replaces four bytes, and re-signs the executable. If the pattern does not match, the script stops without patching.
 
@@ -185,9 +228,53 @@ These observations suggest an incompatibility in the game's internal microphone-
 
 > **关于 PlayCover 版本号：** 本次使用的是 PlayCover **4.0** 构建版本，但安装后软件界面仍可能显示 **3.1.0**。这是本次测试环境中的实际现象，不能仅凭界面显示 `3.1.0` 就断定安装错了版本。建议结合下载来源和构建信息核实；不代表所有标注为 4.0 的构建版本都已验证。
 
-## 最直接的修复方法
+## 第一步：手动调出 macOS 麦克风授权弹窗（重要）
 
-**前提：** 已在 macOS 中允许游戏访问麦克风，并在 PlayCover 游戏设置中启用 `checkMicPermissionSync`。**完全退出游戏和 LLDB**，然后在终端执行下面的完整脚本。脚本会验证特征码仅出现一次、备份原程序、修改 4 字节并重新签名。若特征码不匹配，会停止而不修改文件。
+**之前的 README 漏掉了这一步。** 我们当时点击《金铲铲之战》里的麦克风按钮，**macOS 并不会自动弹出授权请求**。最终是通过 **LLDB 附加到正在运行的游戏进程，在游戏进程内部调用苹果的 `AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio` 接口**，才触发了原生麦克风授权弹窗。
+
+1. 在 PlayCover 中打开《金铲铲之战》的设置，启用 `checkMicPermissionSync`。部分界面会出现 **Bypass / 绕过** 字样，请以具体选项名称为准。然后启动游戏。
+2. 打开 macOS **终端**，查找游戏进程：
+
+   ```bash
+   pgrep -fl jkchess
+   ```
+
+3. 使用 LLDB 附加到游戏进程（把 `<PID>` 换成上一步看到的数字）：
+
+   ```bash
+   lldb -p <PID>
+   ```
+
+   macOS 可能要求授权开发者工具或调试权限。如果系统拒绝附加，**不要为了本教程关闭 SIP 或降低系统安全性**。
+4. 在 `(lldb)` 提示符下，尝试在**游戏进程内部**执行：
+
+   ```text
+   expr -l objc++ -- @import AVFoundation
+   expr -l objc++ -- [AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler:^(BOOL granted) {}]
+   ```
+
+   **说明：** 这是对当时使用的授权 API 的示例性 LLDB 写法，并非在所有 LLDB/macOS 版本上逐字验证过的命令记录。若框架导入或表达式执行失败，不建议盲目尝试修改系统安全配置。
+5. 若出现《金铲铲之战》请求使用麦克风的系统弹窗，点击**允许**。再到 **系统设置 → 隐私与安全性 → 麦克风**，确认游戏的开关已开启。
+6. 在 LLDB 中分离进程，然后**彻底退出游戏**，再执行下面的补丁：
+
+   ```text
+   detach
+   quit
+   ```
+
+**如果依然没有授权弹窗：** 先检查系统麦克风权限列表；如果系统此前已经记录了拒绝或允许，可以在退出游戏后尝试仅重置该游戏的麦克风权限：
+
+```bash
+tccutil reset Microphone com.tencent.jkchess
+```
+
+如果提示找不到对应客户端，可能是 macOS TCC 登记的应用标识不同。**最后手段**才使用 `tccutil reset Microphone`，因为它会重置**所有应用**的麦克风授权，其他应用也需要重新确认。**仅重置授权不会修复游戏内部的权限判断异常。**
+
+苹果官方说明：[macOS 媒体采集授权与权限重置](https://developer.apple.com/documentation/bundleresources/requesting-authorization-for-media-capture-on-macos)。
+
+## 第二步：应用二进制补丁
+
+**前提：** 请先按照上面的「第一步」主动调出并允许 macOS 麦克风授权，再确认 PlayCover 的 `checkMicPermissionSync` 已启用。**完全退出游戏和 LLDB**，然后在终端执行下面的完整脚本。脚本会验证特征码仅出现一次、备份原程序、修改 4 字节并重新签名。若特征码不匹配，会停止而不修改文件。
 
 ```bash
 APP="$HOME/Library/Containers/io.playcover.PlayCover/Applications/com.tencent.jkchess.app/jkchess"
