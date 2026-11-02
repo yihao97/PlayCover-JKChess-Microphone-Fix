@@ -2,7 +2,7 @@
 
 **Language / 语言：** Click to expand your preferred language below. / 点击展开需要的语言。
 
-> **Unofficial executable patch / 非官方程序补丁。** Tested on JKChess **1.14.35.1188** (Res **0.0.35.115**), Mac mini M4, macOS Tahoe 26.5.2. Back up first; other versions are unverified. / 已在上述环境实测，其他版本未经验证，请先备份。
+> **Unofficial executable patch / 非官方程序补丁。** Tested with **PlayCover 4.0** (app may still display **3.1.0**) and JKChess **1.14.35.1188** (Res **0.0.35.115**), Mac mini M4, macOS Tahoe 26.5.2. Back up first; other versions are unverified. / 已在上述环境实测，其他版本未经验证，请先备份。
 
 <details open>
 <summary><strong>🇺🇸 English — Click to expand / collapse</strong></summary>
@@ -21,13 +21,15 @@ When running **金铲铲之战 (JKChess)** (`com.tencent.jkchess`) through PlayC
 | --- | --- |
 | Device | Mac mini (2024), Apple M4, 16 GB RAM |
 | macOS | Tahoe 26.5.2 |
-| Runtime | PlayCover |
+| Runtime | **PlayCover 4.0** (installed app may still display **3.1.0**) |
 | Game | 金铲铲之战 (JKChess) |
 | Game app version | **1.14.35.1188** |
 | Game resource version | **0.0.35.115** |
 | Bundle ID | `com.tencent.jkchess` |
 | Architecture | ARM64 |
 | Result | **Voice recording, sending, and playback confirmed working** |
+
+> **PlayCover version display note:** This workaround was tested with the PlayCover **4.0** build used in this setup. After installation, the application may still show **3.1.0** in its version display. This was observed in the tested setup and does not by itself prove that the wrong build was installed. Check the downloaded build/source rather than relying only on the displayed version number. This guide does not establish that all builds labeled 4.0 behave identically.
 
 ## Quick fix
 
@@ -161,11 +163,27 @@ These observations suggest an incompatibility in the game's internal microphone-
 
 # PlayCover《金铲铲之战》麦克风权限拒绝修复
 
-> **非官方修复，已在 Mac mini M4 / macOS Tahoe 26.5.2 上实测成功。** 修复后可以录制、发送及播放游戏语音。**只适用于与下述特征码和代码逻辑相符的版本**；不保证其他版本有效，也可能触发游戏完整性检查或账号风险。
+> **非官方修复，已在 PlayCover 4.0（界面仍可能显示 3.1.0）、Mac mini M4 / macOS Tahoe 26.5.2 上实测成功。** 修复后可以录制、发送及播放游戏语音。**只适用于与下述特征码和代码逻辑相符的版本**；不保证其他版本有效，也可能触发游戏完整性检查或账号风险。
 
 ## 故障现象
 
 通过 PlayCover 运行《金铲铲之战》（`com.tencent.jkchess`），进入房间自动提示麦克风权限被拒绝。即使 macOS「隐私与安全性 → 麦克风」已允许游戏访问，仍无法使用语音。
+
+## 测试环境
+
+| 项目 | 实测配置 |
+| --- | --- |
+| 设备 | Mac mini (2024)，Apple M4，16 GB 内存 |
+| macOS | Tahoe 26.5.2 |
+| PlayCover | **4.0**（安装后界面可能仍显示 **3.1.0**） |
+| 游戏 | 金铲铲之战（JKChess） |
+| 游戏 App 版本 | **1.14.35.1188** |
+| 资源版本 | **0.0.35.115** |
+| Bundle ID | `com.tencent.jkchess` |
+| 架构 | ARM64 |
+| 结果 | **语音录制、发送、播放均已验证正常** |
+
+> **关于 PlayCover 版本号：** 本次使用的是 PlayCover **4.0** 构建版本，但安装后软件界面仍可能显示 **3.1.0**。这是本次测试环境中的实际现象，不能仅凭界面显示 `3.1.0` 就断定安装错了版本。建议结合下载来源和构建信息核实；不代表所有标注为 4.0 的构建版本都已验证。
 
 ## 最直接的修复方法
 
